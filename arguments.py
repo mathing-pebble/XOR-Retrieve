@@ -44,11 +44,10 @@ class ModelArguments:
 
 @dataclass
 class DataArguments:
+    dataset_name: str = field(metadata={"help": "The name of the dataset to use."})
+    dataset_language: str = field(default="full", metadata={"help": "The language of the dataset."})
     train_dir: str = field(
         default=None, metadata={"help": "Path to train directory"}
-    )
-    dataset_name: str = field(
-        default=None, metadata={"help": "huggingface dataset name"}
     )
     passage_field_separator: str = field(default=' ')
     dataset_proc_num: int = field(
