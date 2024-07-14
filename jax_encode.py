@@ -2,6 +2,7 @@ import logging
 import os
 import pickle
 import sys
+import json
 
 import datasets
 import jax
@@ -116,8 +117,15 @@ def main():
         lookup_indices.extend(batch_ids)
         batch_embeddings = p_encode_step(shard(batch.data), state)
         encoded.extend(np.concatenate(batch_embeddings, axis=0))
-    with open(data_args.encoded_save_path, 'wb') as f:
-        pickle.dump((encoded[:dataset_size], lookup_indices[:dataset_size]), f)
+    
+    # Convert numpy arrays to lists for JSON serialization
+    output_data = {
+        "encoded_queries": [encoded_item.tolist() for encoded_item in encoded[:dataset_size]],
+        "lookup_indices": lookup_indices[:dataset_size]
+    }
+
+    with open(data_args.encoded_save_path, 'w') as f:
+        json.dump(output_data, f)
 
 
 if __name__ == "__main__":
