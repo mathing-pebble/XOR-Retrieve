@@ -27,7 +27,6 @@ from tevax.training import TiedParams, RetrieverTrainState, grad_cache_train_ste
 
 logger = logging.getLogger(__name__)
 
-
 def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, TevatronTrainingArguments))
 
@@ -80,7 +79,6 @@ def main():
         data_args.cm_loss_weight_query = data_args.cm_loss_weight
         data_args.cm_loss_weight_document = data_args.cm_loss_weight
 
-
     set_seed(training_args.seed)
 
     config = AutoConfig.from_pretrained(
@@ -108,9 +106,10 @@ def main():
     else:
         data_files = None
 
-    train_dataset = \
-        datasets.load_dataset(data_args.dataset_name, data_args.dataset_language, cache_dir=model_args.cache_dir,
-                              data_files=data_files)[data_args.dataset_split]
+    # Handle dataset language properly
+    dataset_config = f"{data_args.dataset_name}/{data_args.dataset_language}" if data_args.dataset_language != "default" else data_args.dataset_name
+
+    train_dataset = datasets.load_dataset(dataset_config, cache_dir=model_args.cache_dir, data_files=data_files)[data_args.dataset_split]
 
     basic_tokenizer = BasicTokenizer(do_lower_case=False)
     src2tgt = get_dict(data_args.codemix_set)
