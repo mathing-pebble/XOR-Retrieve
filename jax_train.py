@@ -107,9 +107,9 @@ def main():
         data_files = None
 
     # Handle dataset language properly
-    dataset_config = f"{data_args.dataset_name}/{data_args.dataset_language}" if data_args.dataset_language != "default" else data_args.dataset_name
+    dataset_config = data_args.dataset_name
 
-    train_dataset = datasets.load_dataset(dataset_config, cache_dir=model_args.cache_dir, data_files=data_files)[data_args.dataset_split]
+    train_dataset = datasets.load_dataset(dataset_config, data_args.dataset_language, cache_dir=model_args.cache_dir, data_files=data_files)[data_args.dataset_split]
 
     basic_tokenizer = BasicTokenizer(do_lower_case=False)
     src2tgt = get_dict(data_args.codemix_set)
