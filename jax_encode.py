@@ -3,79 +3,72 @@ import os
 import pickle
 import sys
 import json
+import argparse
 
 import datasets
 import jax
 import numpy as np
-from flax.training.common_utils import shard
-from jax import pmap
-from arguments import DataArguments
-from arguments import TevatronTrainingArguments as TrainingArguments
-from arguments import ModelArguments
 from data import EncodeCollator, EncodeDataset
 from _datasets.dataset import HFQueryDataset, HFCorpusDataset
+from flax.training.common_utils import shard
+from jax import pmap
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from flax.training.train_state import TrainState
 from flax import jax_utils
 import optax
 from transformers import (AutoConfig, AutoTokenizer, FlaxAutoModel,
-                          HfArgumentParser, TensorType)
+                          HfArgumentParser, TensorType, FlaxBertModel)
 
 logger = logging.getLogger(__name__)
 
-
 def main():
-    parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
-    if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
-        model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
-    else:
-        model_args, data_args, training_args = parser.parse_args_into_dataclasses()
-        model_args: ModelArguments
-        data_args: DataArguments
-        training_args: TrainingArguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output_dir", type=str, required=True)
+    parser.add_argument("--model_name_or_path", type=str, required=True)
+    parser.add_argument("--per_device_eval_batch_size", type=int, default=1)
+    parser.add_argument("--dataset_name", type=str, required=True)
+    parser.add_argument("--encoded_save_path", type=str, required=True)
+    parser.add_argument("--encode_is_qry", action="store_true")
+    parser.add_argument("--dataset_proc_num", type=int, default=1)
+    
+    args = parser.parse_args()
 
     # Setup logging
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
         datefmt="%m/%d/%Y %H:%M:%S",
-        level=logging.INFO if training_args.local_rank in [-1, 0] else logging.WARN,
+        level=logging.INFO,
     )
 
-    model_path = (
-        model_args.model_name_or_path
-        if not model_args.untie_encoder
-        else f'{model_args.model_name_or_path}/{"query_encoder" if data_args.encode_is_qry else "passage_encoder"}'
-    )
+    model_path = args.model_name_or_path
 
     num_labels = 1
     config = AutoConfig.from_pretrained(
-        model_args.config_name if model_args.config_name else model_path,
+        model_path,
         num_labels=num_labels,
-        cache_dir=model_args.cache_dir,
     )
     tokenizer = AutoTokenizer.from_pretrained(
-        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-        cache_dir=model_args.cache_dir,
+        model_path,
         use_fast=False,
     )
 
-    model = FlaxAutoModel.from_pretrained(model_path, config=config, from_pt=False)
+    model = FlaxBertModel.from_pretrained(model_path, config=config, from_pt=False)
 
-    text_max_length = data_args.q_max_len if data_args.encode_is_qry else data_args.p_max_len
-    if data_args.encode_is_qry:
+    text_max_length = 128 if args.encode_is_qry else 512
+    if args.encode_is_qry:
         encode_dataset = HFQueryDataset(tokenizer=tokenizer, data_args=data_args,
-                                        cache_dir=data_args.data_cache_dir or model_args.cache_dir)
+                                        cache_dir=None)
     else:
         encode_dataset = HFCorpusDataset(tokenizer=tokenizer, data_args=data_args,
-                                         cache_dir=data_args.data_cache_dir or model_args.cache_dir)
-    encode_dataset = EncodeDataset(encode_dataset.process(data_args.encode_num_shard, data_args.encode_shard_index),
+                                         cache_dir=None)
+    encode_dataset = EncodeDataset(encode_dataset.process(1, 0),
                                    tokenizer, max_len=text_max_length)
 
     # prepare padding batch (for last nonfull batch)
     dataset_size = len(encode_dataset)
     padding_prefix = "padding_"
-    total_batch_size = len(jax.devices()) * training_args.per_device_eval_batch_size
+    total_batch_size = len(jax.devices()) * args.per_device_eval_batch_size
     features = list(encode_dataset.encode_data.features.keys())
     padding_batch = {features[0]: [], features[1]: []}
     for i in range(total_batch_size - (dataset_size % total_batch_size)):
@@ -86,7 +79,7 @@ def main():
 
     encode_loader = DataLoader(
         encode_dataset,
-        batch_size=training_args.per_device_eval_batch_size * len(jax.devices()),
+        batch_size=args.per_device_eval_batch_size * len(jax.devices()),
         collate_fn=EncodeCollator(
             tokenizer,
             max_length=text_max_length,
@@ -96,10 +89,9 @@ def main():
         ),
         shuffle=False,
         drop_last=False,
-        num_workers=training_args.dataloader_num_workers,
+        num_workers=1,
     )
 
-    # craft a fake state for now to replicate on devices
     adamw = optax.adamw(0.0001)
     state = TrainState.create(apply_fn=model.__call__, params=model.params, tx=adamw)
 
@@ -117,16 +109,14 @@ def main():
         lookup_indices.extend(batch_ids)
         batch_embeddings = p_encode_step(shard(batch.data), state)
         encoded.extend(np.concatenate(batch_embeddings, axis=0))
-    
-    # Convert numpy arrays to lists for JSON serialization
+
     output_data = {
         "encoded_queries": [encoded_item.tolist() for encoded_item in encoded[:dataset_size]],
         "lookup_indices": lookup_indices[:dataset_size]
     }
 
-    with open(data_args.encoded_save_path, 'w') as f:
+    with open(args.encoded_save_path, 'w') as f:
         json.dump(output_data, f)
-
 
 if __name__ == "__main__":
     main()
