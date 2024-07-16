@@ -17,7 +17,8 @@ output_dir=/path/to/output/dir
 
 python jax_train.py \
   --do_train --output_dir ${output_dir} \
-  --dataset_name Tevatron/wikipedia-nq \
+  --dataset_name Tevatron/xor-tydi \
+  --dataset_language full \
   --model_name_or_path bert-base-multilingual-cased \
   --per_device_train_batch_size 16 \
   --learning_rate 1e-5 --num_train_epochs 40
@@ -30,7 +31,7 @@ output_dir=/path/to/output/dir
 
 python jax_train.py \
   --do_train --output_dir ${output_dir} \
-  --dataset_name Tevatron/wikipedia-nq \
+  --dataset_name Tevatron/xor-tydi \
   --model_name_or_path bert-base-multilingual-cased \
   --per_device_train_batch_size 16 \
   --learning_rate 1e-5 --num_train_epochs 40 \
@@ -45,7 +46,7 @@ output_dir=/path/to/output/dir
 
 python jax_train.py \
   --do_train --output_dir ${output_dir} \
-  --dataset_name Tevatron/wikipedia-nq \
+  --dataset_name Tevatron/xor-tydi \
   --model_name_or_path bert-base-multilingual-cased \
   --per_device_train_batch_size 16 \
   --learning_rate 1e-5 --num_train_epochs 40 \
@@ -56,35 +57,33 @@ python jax_train.py \
 
 ## Evaluation
 ```
-lang=arabic  
-# one of {'arabic', 'bengali', 'finnish', 'indonesian', 'japanese', 'korean', 'russian', 'thai'} for Mr.TyDi
-# one of {'chinese', 'hindi', 'persian', 'spanish', 'french'} for MIRACL
-lang_abbr=ar
-# one of {'ar', 'bn', 'fi', 'id', 'ja', 'ko', 'ru', 'th'} for Mr.Tydi
-# one of {'zh', 'hi' 'fa', 'es', 'fr} for MIRACL
-set_name=test  # one of {'train', 'dev', 'test'}
-bm25_runfile=${output_dir}/run.bm25.mrtydi-v1.1-${lang}.${set_name}.txt
-dense_runfile=${output_dir}/run.dense.mrtydi-v1.1-${lang}.${set_name}.txt
-query_dataset=castorini/mr-tydi:${lang}:${set_name} # or miracl/miracl:${lang_abbr}:${set_name}
-corpus_dataset=castorini/mr-tydi-corpus:${lang} # or miracl/miracl-corpus:${lang_abbr}
+OUTPUT_DIR="Contrastive_output"
+CORPUS_DATASET="Tevatron/xor-tydi-corpus"
+QUERY_DATASET="Tevatron/xor-tydi:full:dev" # you may chooose xor-tydi:{full, eng-span}:{dev, test}
 
-# encode documents
+# Create output directory if it does not exist
+mkdir -p ${OUTPUT_DIR}
+
+# encoding corpus
+echo "Encoding documents for ${MODEL_DIR}..."
 python jax_encode.py \
   --output_dir=temp \
-  --model_name_or_path ${output_dir} \
+  --model_name_or_path ./${MODEL_DIR}/passage_encoder \
   --per_device_eval_batch_size 156 \
-  --dataset_name ${corpus_dataset} \
-  --encoded_save_path ${output_dir}/corpus_emb_mdpr_nq.pkl
+  --dataset_name ${CORPUS_DATASET} \
+  --encoded_save_path ${OUTPUT_DIR}/corpus_emb_${MODEL_DIR}.pkl
 
-# encode queries
+# encoding query
+echo "Encoding queries for ${MODEL_DIR}..."
 python jax_encode.py \
   --output_dir=temp \
-  --model_name_or_path ${output_dir} \
+  --model_name_or_path ./${MODEL_DIR}/query_encoder \
   --per_device_eval_batch_size 1 \
   --dataset_proc_num 4 \
-  --dataset_name ${query_dataset} \
-  --encoded_save_path ${output_dir}/query_mdpr_nq.pkl \
+  --dataset_name ${QUERY_DATASET} \
+  --encoded_save_path ${OUTPUT_DIR}/query_${MODEL_DIR}.pkl \
   --encode_is_qry
+
 
 # dense retrieve
 python faiss_retriever \
@@ -111,13 +110,3 @@ python utils/evaluate_hybrid.py \
   --weight-on-dense --normalization
 ```
 
-## Citation
-If you find this work useful, please consider citing:
-```
-@inproceedings{do2024contrastivemix,
-  title={ContrastiveMix: Overcoming Code-Mixing Dilemma in Cross-Lingual Transfer for Information Retrieval},
-  author={Junggeun Do and Jaeseong Lee and Seung-won Hwang},
-  booktitle={2024 Annual Conference of the North American Chapter of the Association for Computational Linguistics},
-  year={2024},
-}
-```
