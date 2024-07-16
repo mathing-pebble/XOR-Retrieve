@@ -69,9 +69,9 @@ def main():
 
     # Set a default cache directory if none is provided
     if not data_args.data_cache_dir and not model_args.cache_dir:
-        raise ValueError("No cache directory provided in data_args or model_args.")
-    
-    dataset_cache_dir = os.path.join(data_args.data_cache_dir or model_args.cache_dir, data_args.dataset_name.replace("/", "_"))
+        dataset_cache_dir = os.path.join("/tmp/dataset_cache", data_args.dataset_name.replace("/", "_"))
+    else:
+        dataset_cache_dir = os.path.join(data_args.data_cache_dir or model_args.cache_dir, data_args.dataset_name.replace("/", "_"))
 
     # Check if dataset is already cached
     if not os.path.exists(dataset_cache_dir):
