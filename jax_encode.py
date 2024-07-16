@@ -72,13 +72,18 @@ def main():
         raise ValueError("No cache directory provided in data_args or model_args.")
     
     dataset_cache_dir = os.path.join(data_args.data_cache_dir or model_args.cache_dir, data_args.dataset_name.replace("/", "_"))
+
+    # Check if dataset is already cached
     if not os.path.exists(dataset_cache_dir):
         os.makedirs(dataset_cache_dir)
-
-    encode_dataset = dataset_class(tokenizer=tokenizer, data_args=data_args, cache_dir=dataset_cache_dir)
-
-    encode_dataset = EncodeDataset(encode_dataset.process(data_args.encode_num_shard, data_args.encode_shard_index),
-                                   tokenizer, max_len=text_max_length)
+        encode_dataset = dataset_class(tokenizer=tokenizer, data_args=data_args, cache_dir=dataset_cache_dir)
+        encode_dataset = EncodeDataset(encode_dataset.process(data_args.encode_num_shard, data_args.encode_shard_index),
+                                       tokenizer, max_len=text_max_length)
+    else:
+        logger.info("Dataset already downloaded. Reusing the cache.")
+        encode_dataset = dataset_class(tokenizer=tokenizer, data_args=data_args, cache_dir=dataset_cache_dir)
+        encode_dataset = EncodeDataset(encode_dataset.process(data_args.encode_num_shard, data_args.encode_shard_index),
+                                       tokenizer, max_len=text_max_length)
 
     # prepare padding batch (for last nonfull batch)
     dataset_size = len(encode_dataset)
