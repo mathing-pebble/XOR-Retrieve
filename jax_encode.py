@@ -1,8 +1,7 @@
 import logging
 import os
-import pickle
-import sys
 import json
+import sys
 
 import datasets
 import jax
@@ -20,7 +19,7 @@ from flax.training.train_state import TrainState
 from flax import jax_utils
 import optax
 from transformers import (AutoConfig, AutoTokenizer, FlaxAutoModel,
-                          HfArgumentParser, TensorType, FlaxBertModel)
+                          HfArgumentParser, TensorType)
 
 logger = logging.getLogger(__name__)
 
@@ -121,9 +120,9 @@ def main():
     lookup_indices = []
 
     for batch in tqdm(encode_loader):
-        batch_ids = [item["text_id"] for item in batch[0]]
+        batch_ids = batch['input_ids'].tolist()  # Adjust the key based on the actual batch data structure
         lookup_indices.extend(batch_ids)
-        batch = shard(batch[1])
+        batch = shard(batch)
         batch_embeddings = p_encode_step(batch, state)
         encoded.extend(np.concatenate(batch_embeddings, axis=0))
 
