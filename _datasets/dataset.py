@@ -48,10 +48,14 @@ class HFQueryDataset:
         data_files = data_args.encode_in_path
         if data_files:
             data_files = {data_args.dataset_split: data_files}
+        
+        use_auth_token = None  # Initialize use_auth_token
+        
         if "miracl" in data_args.dataset_name:
             from huggingface_hub import login
             login("your_auth_token")
             use_auth_token = True
+            
         self.dataset = load_dataset(data_args.dataset_name,
                                     data_args.dataset_language,
                                     data_files=data_files, cache_dir=cache_dir, use_auth_token=use_auth_token)[data_args.dataset_split]
