@@ -100,4 +100,41 @@ def main():
             max_length=text_max_length,
             padding='max_length',
             pad_to_multiple_of=16,
-            retur
+            return_tensors=TensorType.NUMPY,
+        ),
+        shuffle=False,
+        drop_last=False,
+        num_workers=training_args.dataloader_num_workers,
+    )
+
+    adamw = optax.adamw(0.0001)
+    state = TrainState.create(apply_fn=model.__call__, params=model.params, tx=adamw)
+
+    def encode_step(batch, state):
+        embedding = state.apply_fn(**batch, params=state.params, train=False)[0]
+        return embedding[:, 0]
+
+    p_encode_step = pmap(encode_step, axis_name='batch')
+    state = jax_utils.replicate(state)
+
+    encoded = []
+    lookup_indices = []
+
+    for batch in tqdm(encode_loader):
+        batch_ids = batch[0]
+        lookup_indices.extend(batch_ids["text_id"])
+        batch = shard(batch[1])
+        batch_embeddings = p_encode_step(batch, state)
+        encoded.extend(np.concatenate(batch_embeddings, axis=0))
+
+    output_data = {
+        "encoded_queries": [encoded_item.tolist() for encoded_item in encoded[:dataset_size]],
+        "lookup_indices": lookup_indices[:dataset_size]
+    }
+
+    with open(data_args.encoded_save_path, 'w') as f:
+        json.dump(output_data, f)
+
+
+if __name__ == "__main__":
+    main()
