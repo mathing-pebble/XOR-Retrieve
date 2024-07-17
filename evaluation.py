@@ -4,16 +4,18 @@ from statistics import mean
 from tqdm import tqdm
 import nltk
 from nltk.tokenize import word_tokenize
-from datasets import load_dataset, Dataset
-from tevatron.data import EncodeDataset
+from datasets import load_dataset
 
 nltk.download('punkt')
 
 
 def read_jsonlines(eval_file_name):
-    print(f"loading examples from {eval_file_name}")
-    dataset = load_dataset(eval_file_name)
-    return dataset
+    print(f"Loading examples from {eval_file_name}")
+    dataset = load_dataset(eval_file_name, split='all')
+    lines = []
+    for obj in dataset:
+        lines.append(obj)
+    return lines
 
 
 def evaluate_top_k_hit(results, gt_answers, max_token_num=5000):
@@ -36,8 +38,8 @@ def evaluate_top_k_hit(results, gt_answers, max_token_num=5000):
         per_lang[lang]["count"] += 1
 
         concat_string_tokens = []
-        for ctx_text in ctxs:
-            tokenized_text = word_tokenize(ctx_text)
+        for ctx in ctxs:
+            tokenized_text = word_tokenize(ctx["text"])
             concat_string_tokens += tokenized_text
             if len(concat_string_tokens) >= max_token_num:
                 break
@@ -71,7 +73,7 @@ def main():
         pred_per_lang_results = evaluate_top_k_hit(predictions, qid2answers, topk * 1000)
         avg_scores = []
         for lang in pred_per_lang_results:
-            print(f"performance on {lang} ({pred_per_lang_results[lang]['count']} examples)")
+            print(f"Performance on {lang} ({pred_per_lang_results[lang]['count']} examples)")
             per_lang_score = (pred_per_lang_results[lang]["hit"] / pred_per_lang_results[lang]["count"]) * 100
             print(per_lang_score)
             avg_scores.append(per_lang_score)
