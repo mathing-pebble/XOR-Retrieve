@@ -59,7 +59,7 @@ python jax_train.py \
 ```
 #!/bin/bash
 MODEL_DIR= /path/model/encoders/dir
-OUTPUT_DIR= /set/your/output/dir
+OUTPUT_DIR= /path/to/output/dir
 CORPUS_DATASET="Tevatron/xor-tydi-corpus"
 QUERY_DATASET="Tevatron/xor-tydi:full:dev" # you may choose xor-tydi:{full, eng-span}:{dev, test}
 
