@@ -57,14 +57,16 @@ python jax_train.py \
 
 ## Evaluation
 ```
-OUTPUT_DIR=/path/to/output/dir
+#!/bin/bash
+MODEL_DIR= /path/model/encoders/dir
+OUTPUT_DIR= /set/your/output/dir
 CORPUS_DATASET="Tevatron/xor-tydi-corpus"
-QUERY_DATASET="Tevatron/xor-tydi:full:dev" # you may chooose xor-tydi:{full, eng-span}:{dev, test}
+QUERY_DATASET="Tevatron/xor-tydi:full:dev" # you may choose xor-tydi:{full, eng-span}:{dev, test}
 
 # Create output directory if it does not exist
 mkdir -p ${OUTPUT_DIR}
 
-# encoding corpus
+# Encoding corpus
 echo "Encoding documents for ${MODEL_DIR}..."
 python jax_encode.py \
   --output_dir=temp \
@@ -73,7 +75,7 @@ python jax_encode.py \
   --dataset_name ${CORPUS_DATASET} \
   --encoded_save_path ${OUTPUT_DIR}/corpus_emb_${MODEL_DIR}.pkl
 
-# encoding query
+# Encoding query
 echo "Encoding queries for ${MODEL_DIR}..."
 python jax_encode.py \
   --output_dir=temp \
@@ -82,14 +84,18 @@ python jax_encode.py \
   --dataset_proc_num 4 \
   --dataset_name ${QUERY_DATASET} \
   --encoded_save_path ${OUTPUT_DIR}/query_${MODEL_DIR}.pkl \
-  --encode_is_qry
+  --encode_is_qry true
 
 # Run evaluation
+# make sure config, split are aligned to the 'QUERY_DATASET'
 echo "Running evaluation for ${MODEL_DIR}..."
 python evaluation.py \
   --data_file "Tevatron/xor-tydi" \
-  --split "full:dev" \
-  --pred_file "${OUTPUT_DIR}/query_${MODEL_DIR}.pkl" \
-  --max_token_num 5000
+  --config "full" \
+  --split "dev" \
+  --query_emb_file "${OUTPUT_DIR}/query_${MODEL_DIR}.pkl" \
+  --corpus_emb_file "${OUTPUT_DIR}/corpus_emb_${MODEL_DIR}.pkl" \
+  --max_token_num 5000 \
+  --top_k 5
 
 echo "Evaluation completed for ${MODEL_DIR}. Results are saved in ${OUTPUT_DIR}/evaluation_${MODEL_DIR}.json"
