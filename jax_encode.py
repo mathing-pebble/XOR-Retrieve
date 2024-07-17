@@ -126,8 +126,9 @@ def main():
         
         print("Batch data keys:", batch_data.keys())
         
-        lookup_indices.extend(batch_ids)
+        batch_data = {k: np.array(v) for k, v in batch_data.items()}
         batch_embeddings = p_encode_step(shard(batch_data), state)
+        lookup_indices.extend(batch_ids)
         encoded.extend(np.concatenate(batch_embeddings, axis=0))
 
     output_data = {
