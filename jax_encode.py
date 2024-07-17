@@ -67,10 +67,12 @@ def main():
     else:
         dataset_class = HFCorpusDataset
 
-    if not data_args.data_cache_dir and not model_args.cache_dir:
+    # Set a default cache directory if none is provided
+    dataset_cache_dir = data_args.data_cache_dir or model_args.cache_dir
+    if not dataset_cache_dir:
         dataset_cache_dir = os.path.join("/tmp/dataset_cache", data_args.dataset_name.replace("/", "_"))
     else:
-        dataset_cache_dir = os.path.join(data_args.data_cache_dir or model_args.cache_dir, data_args.dataset_name.replace("/", "_"))
+        dataset_cache_dir = os.path.join(dataset_cache_dir, data_args.dataset_name.replace("/", "_"))
 
     # Check if dataset is already cached
     if not os.path.exists(dataset_cache_dir):
