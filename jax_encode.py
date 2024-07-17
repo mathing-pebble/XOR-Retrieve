@@ -104,7 +104,7 @@ def main():
 
     p_encode_step = pmap(encode_step)
     state = jax_utils.replicate(state)
-
+ 
     encoded = []
     lookup_indices = []
 
