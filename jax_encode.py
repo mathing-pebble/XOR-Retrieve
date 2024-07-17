@@ -8,9 +8,7 @@ import jax
 import numpy as np
 from flax.training.common_utils import shard
 from jax import pmap
-from arguments import DataArguments
-from arguments import TevatronTrainingArguments as TrainingArguments
-from arguments import ModelArguments
+from arguments import DataArguments, TevatronTrainingArguments as TrainingArguments, ModelArguments
 from data import EncodeCollator, EncodeDataset
 from _datasets.dataset import HFQueryDataset, HFCorpusDataset
 from torch.utils.data import DataLoader
