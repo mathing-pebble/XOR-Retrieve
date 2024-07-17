@@ -6,16 +6,15 @@ import nltk
 from nltk.tokenize import word_tokenize
 from datasets import load_dataset
 import numpy as np
-import pickle
 from faiss_retriever.retriever import FaissRetriever
 
 nltk.download('punkt')
 
 
 def load_embeddings(file_path):
-    with open(file_path, 'rb') as f:
-        embeddings, lookup = pickle.load(f)
-    return embeddings, lookup
+    with open(file_path, 'r') as f:
+        data = json.load(f)
+    return np.array(data["encoded_queries"]), data["lookup_indices"]
 
 
 def read_jsonlines(dataset_name, config_name, split):
@@ -70,18 +69,16 @@ def main():
     parser.add_argument("--data_file", default=None, type=str, help="Dataset name for HF datasets")
     parser.add_argument("--config", default=None, type=str, help="Dataset configuration name")
     parser.add_argument("--split", default=None, type=str, help="Dataset split")
-    parser.add_argument("--query_emb_file", default=None, type=str, help="Path to the query embeddings file (Pickle format)")
-    parser.add_argument("--corpus_emb_file", default=None, type=str, help="Path to the corpus embeddings file (Pickle format)")
+    parser.add_argument("--query_emb_file", default=None, type=str, help="Path to the query embeddings file (JSON format)")
+    parser.add_argument("--corpus_emb_file", default=None, type=str, help="Path to the corpus embeddings file (JSON format)")
     parser.add_argument("--max_token_num", default=5000, type=int, help="Maximum number of tokens to consider")
     parser.add_argument("--top_k", default=5, type=int, help="Top k documents to retrieve")
 
     args = parser.parse_args()
 
-    # Load embeddings
     query_embeddings, query_lookup = load_embeddings(args.query_emb_file)
     corpus_embeddings, corpus_lookup = load_embeddings(args.corpus_emb_file)
 
-    # Load dataset
     input_data = read_jsonlines(args.data_file, args.config, args.split)
 
     # Print structure of the dataset items
