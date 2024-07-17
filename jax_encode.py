@@ -120,10 +120,9 @@ def main():
     lookup_indices = []
 
     for batch in tqdm(encode_loader):
-        batch_ids = batch[0]['text_id'].tolist()  # Adjust the key based on the actual batch data structure
+        batch_ids = [item.decode("utf-8") for item in batch['text_id']]
         lookup_indices.extend(batch_ids)
-        batch = shard(batch)
-        batch_embeddings = p_encode_step(batch, state)
+        batch_embeddings = p_encode_step(shard(batch), state)
         encoded.extend(np.concatenate(batch_embeddings, axis=0))
 
     output_data = {
