@@ -37,11 +37,11 @@ def main():
         level=logging.INFO if training_args.local_rank in [-1, 0] else logging.WARN,
     )
 
-    model_path = (
-        model_args.model_name_or_path
-        if not model_args.untie_encoder
-        else os.path.join(model_args.model_name_or_path, "query_encoder" if data_args.encode_is_qry else "passage_encoder")
-    )
+    if data_args.encode_is_qry:
+        model_path = os.path.join(model_args.model_name_or_path, "query_encoder")
+    else:
+        model_path = os.path.join(model_args.model_name_or_path, "passage_encoder")
+
 
     num_labels = 1
     config = AutoConfig.from_pretrained(
