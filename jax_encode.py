@@ -36,7 +36,8 @@ def main():
     # Load model and tokenizer
     model_path = os.path.abspath(args.model_name_or_path)
     model = FlaxAutoModel.from_pretrained(model_path)
-    tokenizer = AutoTokenizer.from_pretrained(os.path.dirname(model_path))
+    tokenizer_path = os.path.join(os.path.dirname(model_path), '../')
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
 
     # Preprocess function
     def preprocess_function(examples):
