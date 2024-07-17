@@ -9,9 +9,9 @@ from datasets import load_dataset
 nltk.download('punkt')
 
 
-def read_jsonlines(eval_file_name):
-    print(f"Loading examples from {eval_file_name}")
-    dataset = load_dataset(eval_file_name, split='all')
+def read_jsonlines(dataset_name, split):
+    print(f"Loading examples from {dataset_name}, split: {split}")
+    dataset = load_dataset(dataset_name, split=split)
     lines = []
     for obj in dataset:
         lines.append(obj)
@@ -57,6 +57,7 @@ def evaluate_top_k_hit(results, gt_answers, max_token_num=5000):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_file", default=None, type=str, help="Path to the data file (dataset name for HF datasets)")
+    parser.add_argument("--split", default=None, type=str, help="Dataset split")
     parser.add_argument("--pred_file", default=None, type=str, help="Path to the predictions file (JSON format)")
     parser.add_argument("--max_token_num", default=5000, type=int, help="Maximum number of tokens to consider")
 
@@ -64,7 +65,7 @@ def main():
     with open(args.pred_file, 'r') as f:
         predictions = json.load(f)
     
-    input_data = read_jsonlines(args.data_file)
+    input_data = read_jsonlines(args.data_file, args.split)
     # convert input open-domain data into the qid2answer dictionary
     qid2answers = {item["id"]: item["answers"] for item in input_data}
 
