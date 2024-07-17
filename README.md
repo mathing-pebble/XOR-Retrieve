@@ -57,7 +57,7 @@ python jax_train.py \
 
 ## Evaluation
 ```
-OUTPUT_DIR="Contrastive_output"
+OUTPUT_DIR=/path/to/output/dir
 CORPUS_DATASET="Tevatron/xor-tydi-corpus"
 QUERY_DATASET="Tevatron/xor-tydi:full:dev" # you may chooose xor-tydi:{full, eng-span}:{dev, test}
 
