@@ -12,9 +12,9 @@ nltk.download('punkt')
 
 
 def load_embeddings(file_path):
-    with open(file_path, 'r') as f:
-        data = json.load(f)
-    return np.array(data["encoded_queries"]), data["lookup_indices"]
+    with open(file_path, 'rb') as f:
+        data = pickle.load(f)
+    return np.array(data[0]), data[1]
 
 
 def read_jsonlines(dataset_name, config_name, split):
@@ -69,8 +69,8 @@ def main():
     parser.add_argument("--data_file", default=None, type=str, help="Dataset name for HF datasets")
     parser.add_argument("--config", default=None, type=str, help="Dataset configuration name")
     parser.add_argument("--split", default=None, type=str, help="Dataset split")
-    parser.add_argument("--query_emb_file", default=None, type=str, help="Path to the query embeddings file (JSON format)")
-    parser.add_argument("--corpus_emb_file", default=None, type=str, help="Path to the corpus embeddings file (JSON format)")
+    parser.add_argument("--query_emb_file", default=None, type=str, help="Path to the query embeddings file (pickle format)")
+    parser.add_argument("--corpus_emb_file", default=None, type=str, help="Path to the corpus embeddings file (pickle format)")
     parser.add_argument("--max_token_num", default=5000, type=int, help="Maximum number of tokens to consider")
     parser.add_argument("--top_k", default=5, type=int, help="Top k documents to retrieve")
 
@@ -87,7 +87,7 @@ def main():
         print(item)
 
     # Create a dictionary of query_id to answers
-    qid2answers = {item["query_id"]: {"answers": item["answers"], "lang": item.get("lang", "unknown")} for item in input_data}
+    qid2answers = {item["query_id"]: item["answers"] for item in input_data}
 
     # Initialize FAISS retriever
     retriever = FaissRetriever(corpus_embeddings, "Flat")
@@ -100,7 +100,7 @@ def main():
     for q_idx, top_k in enumerate(top_k_indices):
         results.append({
             "id": query_lookup[q_idx],
-            "lang": qid2answers[query_lookup[q_idx]]["lang"],
+            "lang": input_data[q_idx].get("lang", "unknown"),
             "ctxs": [{"text": corpus_lookup[idx]} for idx in top_k]
         })
 
