@@ -67,7 +67,6 @@ def main():
     else:
         dataset_class = HFCorpusDataset
 
-    # Set a default cache directory if none is provided
     if not data_args.data_cache_dir and not model_args.cache_dir:
         dataset_cache_dir = os.path.join("/tmp/dataset_cache", data_args.dataset_name.replace("/", "_"))
     else:
@@ -131,7 +130,6 @@ def main():
         batch_embeddings = p_encode_step(shard(batch.data), state)
         encoded.extend(np.concatenate(batch_embeddings, axis=0))
     
-    # Convert numpy arrays to lists for JSON serialization
     output_data = {
         "encoded_queries": [encoded_item.tolist() for encoded_item in encoded[:dataset_size]],
         "lookup_indices": lookup_indices[:dataset_size]
