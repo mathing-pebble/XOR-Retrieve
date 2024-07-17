@@ -10,8 +10,8 @@ from transformers import FlaxAutoModel, AutoTokenizer
 from tqdm import tqdm
 import torch
 
-def unreplicate(x):
-    return jax.device_get(x)[0]
+def unshard(x):
+    return np.array(x).reshape((-1,) + x.shape[2:])
 
 def main():
     import argparse
@@ -31,7 +31,7 @@ def main():
     if args.encode_is_qry:
         dataset = dataset['train']  # Adjust according to the split you want to use
     else:
-        dataset = dataset['validation']  # Adjust according to the split you want to use
+        dataset = dataset['train']  # Use 'train' split as 'validation' might not exist
 
     # Load model and tokenizer
     model_path = os.path.abspath(args.model_name_or_path)
@@ -52,7 +52,7 @@ def main():
         input_ids = shard(jax.numpy.array(batch['input_ids']))
         attention_mask = shard(jax.numpy.array(batch['attention_mask']))
         outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-        return unreplicate(outputs[0])  # Assuming outputs[0] is the tensor of interest
+        return unshard(outputs[0])  # Assuming outputs[0] is the tensor of interest
 
     # Encode all examples
     all_embeddings = []
