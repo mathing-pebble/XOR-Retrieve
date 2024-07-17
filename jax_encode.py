@@ -22,7 +22,6 @@ from transformers import (AutoConfig, AutoTokenizer, FlaxAutoModel, HfArgumentPa
 
 logger = logging.getLogger(__name__)
 
-
 def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
@@ -48,12 +47,12 @@ def main():
 
     num_labels = 1
     config = AutoConfig.from_pretrained(
-        model_args.config_name if model_args.config_name else model_path,
+        model_path,
         num_labels=num_labels,
         cache_dir=model_args.cache_dir,
     )
     tokenizer = AutoTokenizer.from_pretrained(
-        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
+        model_path,
         cache_dir=model_args.cache_dir,
         use_fast=False,
     )
@@ -113,11 +112,12 @@ def main():
 
     for (batch_ids, batch) in tqdm(encode_loader):
         lookup_indices.extend(batch_ids)
-        batch_embeddings = p_encode_step(shard(batch.data), state)
+        batch_embeddings = p_encode_step(shard(batch['input_ids']), state)
         encoded.extend(np.concatenate(batch_embeddings, axis=0))
-    with open(data_args.encoded_save_path, 'wb') as f:
-        pickle.dump((encoded[:dataset_size], lookup_indices[:dataset_size]), f)
 
+    # Save the embeddings and lookup indices to a file
+    with open(data_args.encoded_save_path, 'wb') as f:
+        pickle.dump((np.array(encoded[:dataset_size]), lookup_indices[:dataset_size]), f)
 
 if __name__ == "__main__":
     main()
