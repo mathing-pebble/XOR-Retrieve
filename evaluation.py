@@ -4,18 +4,17 @@ from statistics import mean
 from tqdm import tqdm
 import nltk
 from nltk.tokenize import word_tokenize
-from datasets import load_dataset
+from datasets import load_dataset, Dataset
+from tevatron.data import EncodeDataset
 
 nltk.download('punkt')
 
 
 def read_jsonlines(eval_file_name):
-    lines = []
     print(f"loading examples from {eval_file_name}")
     dataset = load_dataset(eval_file_name)
-    for obj in dataset:
-        lines.append(obj)
-    return lines
+    return dataset
+
 
 def evaluate_top_k_hit(results, gt_answers, max_token_num=5000):
     per_lang = {}
@@ -60,7 +59,9 @@ def main():
     parser.add_argument("--max_token_num", default=5000, type=int, help="Maximum number of tokens to consider")
 
     args = parser.parse_args()
-    predictions = json.load(open(args.pred_file))
+    with open(args.pred_file, 'r') as f:
+        predictions = json.load(f)
+    
     input_data = read_jsonlines(args.data_file)
     # convert input open-domain data into the qid2answer dictionary
     qid2answers = {item["id"]: item["answers"] for item in input_data}
