@@ -74,7 +74,8 @@ def main():
     for item in input_data[:5]:
         print(item)
 
-    qid2answers = {item["id"]: item["answers"] for item in input_data}
+    # Use correct key for query ID
+    qid2answers = {item["query_id"]: item["answers"] for item in input_data}
 
     for topk in [2, 5]:
         print(f"Evaluating R@{topk}kt")
