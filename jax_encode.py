@@ -42,7 +42,7 @@ def main():
     model_path = (
         model_args.model_name_or_path
         if not model_args.untie_encoder
-        else f'{model_args.model_name_or_path}/{"query_encoder" if data_args.encode_is_qry else "passage_encoder"}'
+        else os.path.join(model_args.model_name_or_path, "query_encoder" if data_args.encode_is_qry else "passage_encoder")
     )
 
     num_labels = 1
