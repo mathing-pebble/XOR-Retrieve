@@ -85,28 +85,11 @@ python jax_encode.py \
   --encode_is_qry
 
 
-# dense retrieve
-python faiss_retriever \
-  --query_reps ${output_dir}/query_mdpr_nq.pkl \
-  --passage_reps ${output_dir}/corpus_emb_mdpr_nq.pkl \
-  --depth 1000 \
-  --batch_size -1 \
-  --save_text --for_pyserini \
-  --save_ranking_to ${dense_runfile}
+echo "Running evaluation for ${MODEL_DIR}..."
+# Run evaluation
+python evaluation.py \
+  --data_file ${QUERY_DATASET} \
+  --pred_file "${OUTPUT_DIR}/query_${MODEL_DIR}.pkl" \
+  --max_token_num 5000
 
-# sparse retrieve
-python -m pyserini.search --bm25 \
-  --language ${lang_abbr} \
-  --topics mrtydi-v1.1-${lang}-${set_name} \
-  --index mrtydi-v1.1-${lang} \
-  --output ${bm25_runfile} \
-  --k1 0.9 \
-  --b 0.4
-
-# sparse-dense hybrid evaluation
-python utils/evaluate_hybrid.py \
-  --lang ${lang} --lang_abbr ${lang_abbr} \
-  --sparse ${bm25_runfile} --dense ${dense_runfile} --set_name ${set_name} \
-  --weight-on-dense --normalization
-```
-
+echo "Evaluation completed for ${MODEL_DIR}. Results are saved in ${OUTPUT_DIR}/evaluation_${MODEL_DIR}.json"
