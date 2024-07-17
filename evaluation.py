@@ -4,6 +4,7 @@ from statistics import mean
 from tqdm import tqdm
 import nltk
 from nltk.tokenize import word_tokenize
+from datasets import load_dataset
 
 nltk.download('punkt')
 
@@ -11,11 +12,10 @@ nltk.download('punkt')
 def read_jsonlines(eval_file_name):
     lines = []
     print(f"loading examples from {eval_file_name}")
-    with open(eval_file_name, 'r') as reader:
-        for obj in json.load(reader):
-            lines.append(obj)
+    dataset = load_dataset(eval_file_name)
+    for obj in dataset:
+        lines.append(obj)
     return lines
-
 
 def evaluate_top_k_hit(results, gt_answers, max_token_num=5000):
     per_lang = {}
@@ -55,7 +55,7 @@ def evaluate_top_k_hit(results, gt_answers, max_token_num=5000):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_file", default=None, type=str, help="Path to the data file (jsonlines format)")
+    parser.add_argument("--data_file", default=None, type=str, help="Path to the data file (dataset name for HF datasets)")
     parser.add_argument("--pred_file", default=None, type=str, help="Path to the predictions file (JSON format)")
     parser.add_argument("--max_token_num", default=5000, type=int, help="Maximum number of tokens to consider")
 
