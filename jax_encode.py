@@ -47,12 +47,12 @@ def main():
 
     num_labels = 1
     config = AutoConfig.from_pretrained(
-        model_args.config_name if model_args.config_name else model_path,
+        model_path,
         num_labels=num_labels,
         cache_dir=model_args.cache_dir,
     )
     tokenizer = AutoTokenizer.from_pretrained(
-        model_args.tokenizer_name if model_args.tokenizer_name else model_path,
+        model_path,
         cache_dir=model_args.cache_dir,
         use_fast=False,
     )
@@ -60,41 +60,12 @@ def main():
     model = FlaxAutoModel.from_pretrained(model_path, config=config, from_pt=False)
 
     text_max_length = data_args.q_max_len if data_args.encode_is_qry else data_args.p_max_len
-    if data_args.encode_is_qry:
-        dataset_class = HFQueryDataset
-    else:
-        dataset_class = HFCorpusDataset
+    dataset_class = HFQueryDataset if data_args.encode_is_qry else HFCorpusDataset
 
-    # Set a default cache directory if none is provided
-    if not data_args.data_cache_dir and not model_args.cache_dir:
-        dataset_cache_dir = os.path.join("/tmp/dataset_cache", data_args.dataset_name.replace("/", "_"))
-    else:
-        dataset_cache_dir = os.path.join(data_args.data_cache_dir or model_args.cache_dir, data_args.dataset_name.replace("/", "_"))
+    dataset = load_dataset(data_args.dataset_name, cache_dir=model_args.cache_dir)
+    dataset = dataset['validation'] if 'validation' in dataset else dataset['train']
 
-    # Check if dataset is already cached
-    if not os.path.exists(dataset_cache_dir):
-        os.makedirs(dataset_cache_dir)
-        encode_dataset = dataset_class(tokenizer=tokenizer, data_args=data_args, cache_dir=dataset_cache_dir)
-        encode_dataset = EncodeDataset(encode_dataset.process(data_args.encode_num_shard, data_args.encode_shard_index),
-                                       tokenizer, max_len=text_max_length)
-    else:
-        logger.info("Dataset already downloaded. Reusing the cache.")
-        encode_dataset = dataset_class(tokenizer=tokenizer, data_args=data_args, cache_dir=dataset_cache_dir)
-        encode_dataset = EncodeDataset(encode_dataset.process(data_args.encode_num_shard, data_args.encode_shard_index),
-                                       tokenizer, max_len=text_max_length)
-
-    # prepare padding batch (for last nonfull batch)
-    dataset_size = len(encode_dataset)
-    padding_prefix = "padding_"
-    total_batch_size = len(jax.devices()) * training_args.per_device_eval_batch_size
-    features = list(encode_dataset.encode_data.features.keys())
-    padding_batch = {features[0]: [], features[1]: []}
-    for i in range(total_batch_size - (dataset_size % total_batch_size)):
-        padding_batch["text_id"].append(f"{padding_prefix}{i}")
-        padding_batch["text"].append([0])
-    padding_batch = datasets.Dataset.from_dict(padding_batch)
-    encode_dataset.encode_data = datasets.concatenate_datasets([encode_dataset.encode_data, padding_batch])
-
+    encode_dataset = EncodeDataset(dataset, tokenizer, max_len=text_max_length)
     encode_loader = DataLoader(
         encode_dataset,
         batch_size=training_args.per_device_eval_batch_size * len(jax.devices()),
@@ -110,7 +81,6 @@ def main():
         num_workers=training_args.dataloader_num_workers,
     )
 
-    # craft a fake state for now to replicate on devices
     adamw = optax.adamw(0.0001)
     state = TrainState.create(apply_fn=model.__call__, params=model.params, tx=adamw)
 
@@ -128,16 +98,14 @@ def main():
         lookup_indices.extend(batch_ids)
         batch_embeddings = p_encode_step(shard(batch.data), state)
         encoded.extend(np.concatenate(batch_embeddings, axis=0))
-    
-    # Convert numpy arrays to lists for JSON serialization
+
     output_data = {
-        "encoded_queries": [encoded_item.tolist() for encoded_item in encoded[:dataset_size]],
-        "lookup_indices": lookup_indices[:dataset_size]
+        "encoded_queries": [encoded_item.tolist() for encoded_item in encoded],
+        "lookup_indices": lookup_indices
     }
 
-    with open(data_args.encoded_save_path, 'wb') as f:
-        pickle.dump(output_data, f)
-
+    with open(data_args.encoded_save_path, 'w') as f:
+        json.dump(output_data, f)
 
 if __name__ == "__main__":
     main()
