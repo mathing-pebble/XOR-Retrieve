@@ -99,8 +99,11 @@ def main():
     state = TrainState.create(apply_fn=model.__call__, params=model.params, tx=adamw)
 
     def encode_step(batch, state):
-        embedding = state.apply_fn(**batch, params=state.params, train=False)[0]
+        input_ids = batch['input_ids']
+        attention_mask = batch['attention_mask']
+        embedding = state.apply_fn(input_ids=input_ids, attention_mask=attention_mask, params=state.params, train=False)[0]
         return embedding[:, 0]
+
 
     p_encode_step = pmap(encode_step)
     state = jax_utils.replicate(state)
