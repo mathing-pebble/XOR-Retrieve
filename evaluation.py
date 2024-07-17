@@ -69,7 +69,7 @@ def main():
         predictions = json.load(f)
     
     input_data = read_jsonlines(args.data_file, args.config, args.split)
-    # convert input open-domain data into the qid2answer dictionary
+    # Print structure of the dataset items
     print("Inspecting the dataset structure:")
     for item in input_data[:5]:
         print(item)
