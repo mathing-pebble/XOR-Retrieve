@@ -5,9 +5,13 @@ import jax.numpy as jnp
 import numpy as np
 from datasets import load_dataset
 from flax.training import train_state
-from flax.training.common_utils import shard, unreplicate
-from transformers import FlaxAutoModel, AutoTokenizer, AutoConfig
+from flax.training.common_utils import shard
+from transformers import FlaxAutoModel, AutoTokenizer
 from tqdm import tqdm
+import torch
+
+def unreplicate(x):
+    return x[0]
 
 def main():
     import argparse
@@ -39,14 +43,14 @@ def main():
         return tokenizer(examples['text'], padding='max_length', truncation=True, max_length=128)
     
     dataset = dataset.map(preprocess_function, batched=True, num_proc=args.dataset_proc_num)
-    dataset.set_format(type='numpy', columns=['input_ids', 'attention_mask'])
+    dataset.set_format(type='torch', columns=['input_ids', 'attention_mask'])
 
     # Create data loader
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.per_device_eval_batch_size)
 
     def encode(batch):
-        input_ids = shard(batch['input_ids'])
-        attention_mask = shard(batch['attention_mask'])
+        input_ids = shard(batch['input_ids'].numpy())
+        attention_mask = shard(batch['attention_mask'].numpy())
         outputs = model(input_ids=input_ids, attention_mask=attention_mask)
         return unreplicate(outputs[0])  # Assuming outputs[0] is the tensor of interest
 
@@ -60,7 +64,7 @@ def main():
     
     # Save embeddings
     with open(args.encoded_save_path, 'wb') as f:
-        pickle.dump(all_embeddings, f)
+        pickle.dump((all_embeddings, list(range(len(all_embeddings)))), f)
 
 if __name__ == "__main__":
     main()
