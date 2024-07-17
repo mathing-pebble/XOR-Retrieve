@@ -84,11 +84,11 @@ python jax_encode.py \
   --encoded_save_path ${OUTPUT_DIR}/query_${MODEL_DIR}.pkl \
   --encode_is_qry
 
-
-echo "Running evaluation for ${MODEL_DIR}..."
 # Run evaluation
+echo "Running evaluation for ${MODEL_DIR}..."
 python evaluation.py \
-  --data_file ${QUERY_DATASET} \
+  --data_file "Tevatron/xor-tydi" \
+  --split "full:dev" \
   --pred_file "${OUTPUT_DIR}/query_${MODEL_DIR}.pkl" \
   --max_token_num 5000
 
