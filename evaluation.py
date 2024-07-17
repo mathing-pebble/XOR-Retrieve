@@ -77,28 +77,15 @@ def main():
 
     args = parser.parse_args()
 
-    # Load embeddings
     query_embeddings, query_lookup = load_embeddings(args.query_emb_file)
     corpus_embeddings, corpus_lookup = load_embeddings(args.corpus_emb_file)
 
-    # Load dataset
     input_data = read_jsonlines(args.data_file, args.config, args.split)
-
-    # Print structure of the dataset items
-    print("Inspecting the dataset structure:")
-    for item in input_data[:5]:
-        print(item)
-
-    # Create a dictionary of query_id to answers
     qid2answers = {item["query_id"]: {"answers": item["answers"], "lang": item.get("lang", "unknown")} for item in input_data}
 
-    # Initialize FAISS retriever
     retriever = FaissRetriever(corpus_embeddings, "Flat")
-
-    # Perform retrieval
     top_k_scores, top_k_indices = retriever.batch_search(query_embeddings, args.top_k, batch_size=128, quiet=False)
 
-    # Prepare results for evaluation
     results = []
     for q_idx, top_k in enumerate(top_k_indices):
         results.append({
@@ -106,8 +93,8 @@ def main():
             "lang": qid2answers[query_lookup[q_idx]]["lang"],
             "ctxs": [{"text": corpus_lookup[idx]} for idx in top_k]
         })
-
-    # Evaluate results
+    
+    # XOR-Retrieve evaluation
     for topk in [2, 5]:
         print(f"Evaluating R@{topk}kt")
         pred_per_lang_results = evaluate_top_k_hit(results, qid2answers, topk * 1000)
