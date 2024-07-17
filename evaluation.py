@@ -8,6 +8,17 @@ from nltk.tokenize import word_tokenize
 from datasets import load_dataset
 import numpy as np
 from faiss_retriever.retriever import FaissRetriever
+import tempfile
+import os
+
+if not os.path.exists('/tmp'):
+    os.makedirs('/tmp')
+if not os.path.exists('/var/tmp'):
+    os.makedirs('/var/tmp')
+if not os.path.exists('/usr/tmp'):
+    os.makedirs('/usr/tmp')
+
+os.environ['TMPDIR'] = '/tmp'
 
 nltk.download('punkt')
 
