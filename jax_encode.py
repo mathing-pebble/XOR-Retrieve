@@ -1,5 +1,6 @@
 import logging
 import os
+import pickle
 import sys
 import json
 
@@ -19,7 +20,7 @@ from flax.training.train_state import TrainState
 from flax import jax_utils
 import optax
 from transformers import (AutoConfig, AutoTokenizer, FlaxAutoModel,
-                          HfArgumentParser, TensorType)
+                          HfArgumentParser, TensorType, FlaxBertModel)
 
 logger = logging.getLogger(__name__)
 
@@ -58,17 +59,16 @@ def main():
     model = FlaxAutoModel.from_pretrained(model_path, config=config, from_pt=False)
 
     text_max_length = data_args.q_max_len if data_args.encode_is_qry else data_args.p_max_len
-    if data_args.encode_is_qry:
-        dataset_class = HFQueryDataset
-    else:
-        dataset_class = HFCorpusDataset
+    dataset_class = HFQueryDataset if data_args.encode_is_qry else HFCorpusDataset
 
+    # Set a default cache directory if none is provided
     dataset_cache_dir = data_args.data_cache_dir or model_args.cache_dir
     if not dataset_cache_dir:
         dataset_cache_dir = os.path.join("/tmp/dataset_cache", data_args.dataset_name.replace("/", "_"))
     else:
         dataset_cache_dir = os.path.join(dataset_cache_dir, data_args.dataset_name.replace("/", "_"))
 
+    # Check if dataset is already cached
     if not os.path.exists(dataset_cache_dir):
         os.makedirs(dataset_cache_dir)
         encode_dataset = dataset_class(tokenizer=tokenizer, data_args=data_args, cache_dir=dataset_cache_dir)
@@ -80,6 +80,7 @@ def main():
         encode_dataset = EncodeDataset(encode_dataset.process(data_args.encode_num_shard, data_args.encode_shard_index),
                                        tokenizer, max_len=text_max_length)
 
+    # prepare padding batch (for last nonfull batch)
     dataset_size = len(encode_dataset)
     padding_prefix = "padding_"
     total_batch_size = len(jax.devices()) * training_args.per_device_eval_batch_size
@@ -113,17 +114,19 @@ def main():
         embedding = state.apply_fn(**batch, params=state.params, train=False)[0]
         return embedding[:, 0]
 
-    p_encode_step = pmap(encode_step)
+    p_encode_step = pmap(encode_step, axis_name='batch')
     state = jax_utils.replicate(state)
 
     encoded = []
     lookup_indices = []
 
-    for (batch_ids, batch) in tqdm(encode_loader):
+    for batch in tqdm(encode_loader):
+        batch_ids = batch.pop("text_id")
         lookup_indices.extend(batch_ids)
-        batch_embeddings = p_encode_step(shard(batch["input_ids"]), state)
+        batch = shard(batch)
+        batch_embeddings = p_encode_step(batch, state)
         encoded.extend(np.concatenate(batch_embeddings, axis=0))
-    
+
     output_data = {
         "encoded_queries": [encoded_item.tolist() for encoded_item in encoded[:dataset_size]],
         "lookup_indices": lookup_indices[:dataset_size]
