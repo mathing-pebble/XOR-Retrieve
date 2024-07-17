@@ -121,9 +121,9 @@ def main():
     lookup_indices = []
 
     for batch in tqdm(encode_loader):
-        batch_ids = batch.pop("text_id")
+        batch_ids = batch[0]["text_id"]
         lookup_indices.extend(batch_ids)
-        batch = shard(batch)
+        batch = shard(batch[1])
         batch_embeddings = p_encode_step(batch, state)
         encoded.extend(np.concatenate(batch_embeddings, axis=0))
 
