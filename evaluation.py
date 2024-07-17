@@ -12,6 +12,8 @@ nltk.download('punkt')
 def read_jsonlines(dataset_name, config_name, split):
     print(f"Loading examples from {dataset_name}, config: {config_name}, split: {split}")
     dataset = load_dataset(dataset_name, config_name, split=split)
+    print(f"First item in dataset: {dataset[0]}")
+    print(f"Keys in dataset: {dataset[0].keys()}")
     lines = []
     for obj in dataset:
         lines.append(obj)
@@ -68,6 +70,10 @@ def main():
     
     input_data = read_jsonlines(args.data_file, args.config, args.split)
     # convert input open-domain data into the qid2answer dictionary
+    print("Inspecting the dataset structure:")
+    for item in input_data[:5]:
+        print(item)
+
     qid2answers = {item["id"]: item["answers"] for item in input_data}
 
     for topk in [2, 5]:
