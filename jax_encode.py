@@ -52,7 +52,7 @@ def main():
         cache_dir=model_args.cache_dir,
     )
     tokenizer = AutoTokenizer.from_pretrained(
-        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
+        model_args.tokenizer_name if model_args.tokenizer_name else model_path,
         cache_dir=model_args.cache_dir,
         use_fast=False,
     )
@@ -135,8 +135,8 @@ def main():
         "lookup_indices": lookup_indices[:dataset_size]
     }
 
-    with open(data_args.encoded_save_path, 'w') as f:
-        json.dump(output_data, f)
+    with open(data_args.encoded_save_path, 'wb') as f:
+        pickle.dump(output_data, f)
 
 
 if __name__ == "__main__":
