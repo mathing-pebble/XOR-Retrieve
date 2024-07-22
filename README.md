@@ -7,7 +7,7 @@ This work is based on [Tevatron](https://github.com/texttron/tevatron), [Pyserin
 ## Requirements
 We conducted all experiments on v3-8 TPU VM with Python 3.9.12 and the following dependencies.
 ```
-pip install torch==1.10.1 faiss-cpu==1.7.2 transformers==4.15.0 nltk==3.8.1 datasets==1.17.0 pyserini===0.21.0 optax==0.1.5 flax==0.6.11 chex==0.1.7 scipy==1.7.3 numpy==1.21.6 pandas=1.4.0 "jax[tpu]==0.4.7" -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
+pip install torch==1.10.1 faiss-cpu==1.7.2 transformers==4.15.0 nltk==3.8.1 datasets==1.17.0 pyserini===0.21.0 optax==0.1.5 flax==0.6.11 chex==0.1.7 scipy==1.7.3 numpy==1.21.6 pandas==1.4.0 "jax[tpu]==0.4.7" -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
 ```
 
 ## Training
