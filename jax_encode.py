@@ -2,23 +2,24 @@ import logging
 import os
 import json
 import sys
-import numpy as np
+
+import datasets
 import jax
-import optax
+import numpy as np
 from flax.training.common_utils import shard
 from jax import pmap
-from flax.training.train_state import TrainState
-from flax import jax_utils
-from torch.utils.data import DataLoader
-from tqdm import tqdm
-from datasets import concatenate_datasets, Dataset
-
 from arguments import DataArguments
 from arguments import TevatronTrainingArguments as TrainingArguments
 from arguments import ModelArguments
 from data import EncodeCollator, EncodeDataset
 from _datasets.dataset import HFQueryDataset, HFCorpusDataset
-from transformers import AutoConfig, AutoTokenizer, FlaxAutoModel, HfArgumentParser, TensorType
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+from flax.training.train_state import TrainState
+from flax import jax_utils
+import optax
+from transformers import (AutoConfig, AutoTokenizer, FlaxAutoModel,
+                          HfArgumentParser, TensorType)
 
 logger = logging.getLogger(__name__)
 
@@ -87,8 +88,8 @@ def main():
     for i in range(total_batch_size - (dataset_size % total_batch_size)):
         padding_batch["text_id"].append(f"{padding_prefix}{i}")
         padding_batch["text"].append([0])
-    padding_batch = Dataset.from_dict(padding_batch)
-    encode_dataset.encode_data = concatenate_datasets([encode_dataset.encode_data, padding_batch])
+    padding_batch = datasets.Dataset.from_dict(padding_batch)
+    encode_dataset.encode_data = datasets.concatenate_datasets([encode_dataset.encode_data, padding_batch])
 
     encode_loader = DataLoader(
         encode_dataset,
@@ -117,7 +118,7 @@ def main():
 
     encoded = []
     lookup_indices = []
-    chunk_size = 10000  # Change this value to adjust chunk size
+    chunk_size = 10000  # Adjust the chunk size as needed
     chunk_counter = 0
 
     for i, batch in enumerate(tqdm(encode_loader)):
@@ -135,8 +136,8 @@ def main():
                 "encoded_queries": [encoded_item.tolist() for encoded_item in encoded],
                 "lookup_indices": lookup_indices
             }
-            with open(f'{data_args.encoded_save_path}_chunk_{chunk_counter}.json', 'w') as f:
-                json.dump(output_data, f)
+            with open(f'{data_args.encoded_save_path}_chunk_{chunk_counter}.pkl', 'wb') as f:
+                pickle.dump(output_data, f)
             encoded = []
             lookup_indices = []
             chunk_counter += 1
@@ -147,9 +148,8 @@ def main():
             "encoded_queries": [encoded_item.tolist() for encoded_item in encoded],
             "lookup_indices": lookup_indices
         }
-        with open(f'{data_args.encoded_save_path}_chunk_{chunk_counter}.json', 'w') as f:
-            json.dump(output_data, f)
-
+        with open(f'{data_args.encoded_save_path}_chunk_{chunk_counter}.pkl', 'wb') as f:
+            pickle.dump(output_data, f)
 
 if __name__ == "__main__":
     main()
