@@ -11,14 +11,12 @@ from faiss_retriever.retriever import FaissRetriever
 import tempfile
 import os
 
+# Set TMPDIR to /tmp
+os.environ['TMPDIR'] = '/tmp'
+
+# Create /tmp if it does not exist
 if not os.path.exists('/tmp'):
     os.makedirs('/tmp')
-if not os.path.exists('/var/tmp'):
-    os.makedirs('/var/tmp')
-if not os.path.exists('/usr/tmp'):
-    os.makedirs('/usr/tmp')
-
-os.environ['TMPDIR'] = '/tmp'
 
 nltk.download('punkt')
 
