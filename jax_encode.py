@@ -148,7 +148,7 @@ def main():
             encoded = []
             lookup_indices = []
             chunk_counter += 1
-          clear_memory()
+        clear_memory()
   
 
     # Save any remaining data
