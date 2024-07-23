@@ -125,7 +125,7 @@ def main():
 
     encoded = []
     lookup_indices = []
-    chunk_size = 1000  # Adjust the chunk size as needed
+    chunk_size = 10000  # Adjust the chunk size as needed
     chunk_counter = 0
 
     for i, batch in enumerate(tqdm(encode_loader)):
@@ -138,7 +138,7 @@ def main():
         encoded.extend(np.concatenate(batch_embeddings, axis=0))
 
         # Save intermediate results and clear memory
-        if (i + 1) % chunk_size == 0:
+        if len(encoded) >= chunk_size:
             output_data = {
                 "encoded_queries": [encoded_item.tolist() for encoded_item in encoded],
                 "lookup_indices": lookup_indices
