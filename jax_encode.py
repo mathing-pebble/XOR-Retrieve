@@ -138,7 +138,7 @@ def main():
         encoded.extend(np.concatenate(batch_embeddings, axis=0))
 
         # Save intermediate results and clear memory
-        if len(encoded) >= chunk_size:
+        if (i + 1) % chunk_size == 0:
             output_data = {
                 "encoded_queries": [encoded_item.tolist() for encoded_item in encoded],
                 "lookup_indices": lookup_indices
@@ -148,7 +148,8 @@ def main():
             encoded = []
             lookup_indices = []
             chunk_counter += 1
-            clear_memory()
+          clear_memory()
+  
 
     # Save any remaining data
     if encoded:
@@ -158,8 +159,6 @@ def main():
         }
         with open(f'{data_args.encoded_save_path}_chunk_{chunk_counter}.pkl', 'wb') as f:
             pickle.dump(output_data, f)
-
-    clear_memory()
 
 if __name__ == "__main__":
     main()
