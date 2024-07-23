@@ -24,6 +24,12 @@ from transformers import (AutoConfig, AutoTokenizer, FlaxAutoModel,
 
 logger = logging.getLogger(__name__)
 
+def clear_memory():
+    import gc
+    gc.collect()
+    import jax
+    jax.clear_backends()
+
 def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
@@ -119,7 +125,7 @@ def main():
 
     encoded = []
     lookup_indices = []
-    chunk_size = 10000  # Adjust the chunk size as needed
+    chunk_size = 1000  # Adjust the chunk size as needed
     chunk_counter = 0
 
     for i, batch in enumerate(tqdm(encode_loader)):
@@ -142,6 +148,7 @@ def main():
             encoded = []
             lookup_indices = []
             chunk_counter += 1
+            clear_memory()
 
     # Save any remaining data
     if encoded:
@@ -151,6 +158,8 @@ def main():
         }
         with open(f'{data_args.encoded_save_path}_chunk_{chunk_counter}.pkl', 'wb') as f:
             pickle.dump(output_data, f)
+
+    clear_memory()
 
 if __name__ == "__main__":
     main()
