@@ -3,7 +3,7 @@ import os
 import json
 import sys
 import pickle
-import gc
+
 
 import datasets
 import jax
@@ -24,10 +24,6 @@ from transformers import (AutoConfig, AutoTokenizer, FlaxAutoModel,
                           HfArgumentParser, TensorType)
 
 logger = logging.getLogger(__name__)
-
-def clear_memory():
-    gc.collect()
-    jax.clear_backends()
 
 def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
@@ -124,41 +120,24 @@ def main():
 
     encoded = []
     lookup_indices = []
-    chunk_size = 10000  # Adjust the chunk size as needed
-    chunk_counter = 0
 
     for batch in tqdm(encode_loader):
         batch_ids = batch[0]  # List of text_ids
         batch_data = batch[1]  # Actual data dictionary
-
+        
         batch_data = {k: np.array(v) for k, v in batch_data.items()}
         batch_embeddings = p_encode_step(shard(batch_data), state)
         lookup_indices.extend(batch_ids)
         encoded.extend(np.concatenate(batch_embeddings, axis=0))
 
-        # Save intermediate results and clear memory
-        if len(encoded) >= chunk_size:
-            output_data = {
-                "encoded_queries": [encoded_item.tolist() for encoded_item in encoded],
-                "lookup_indices": lookup_indices
-            }
-            with open(f'{data_args.encoded_save_path}_chunk_{chunk_counter}.pkl', 'wb') as f:
-                pickle.dump(output_data, f)
-            encoded = []
-            lookup_indices = []
-            chunk_counter += 1
-            clear_memory()
+    output_data = {
+        "encoded_queries": [encoded_item.tolist() for encoded_item in encoded[:dataset_size]],
+        "lookup_indices": lookup_indices[:dataset_size]
+    }
 
-    # Save any remaining data
-    if encoded:
-        output_data = {
-            "encoded_queries": [encoded_item.tolist() for encoded_item in encoded],
-            "lookup_indices": lookup_indices
-        }
-        with open(f'{data_args.encoded_save_path}_chunk_{chunk_counter}.pkl', 'wb') as f:
-            pickle.dump(output_data, f)
+    with open(data_args.encoded_save_path, 'w') as f:
+        json.dump(output_data, f)
 
-    clear_memory()
 
 if __name__ == "__main__":
     main()
