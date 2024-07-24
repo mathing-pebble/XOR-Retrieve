@@ -67,6 +67,7 @@ def main():
     else:
         dataset_cache_dir = os.path.join(dataset_cache_dir, data_args.dataset_name.replace("/", "_"))
 
+    # Check if dataset is already cached
     if not os.path.exists(dataset_cache_dir):
         os.makedirs(dataset_cache_dir)
         encode_dataset = dataset_class(tokenizer=tokenizer, data_args=data_args, cache_dir=dataset_cache_dir)
@@ -78,6 +79,7 @@ def main():
         encode_dataset = EncodeDataset(encode_dataset.process(data_args.encode_num_shard, data_args.encode_shard_index),
                                        tokenizer, max_len=text_max_length)
 
+    # prepare padding batch (for last nonfull batch)
     dataset_size = len(encode_dataset)
     padding_prefix = "padding_"
     total_batch_size = len(jax.devices()) * training_args.per_device_eval_batch_size
