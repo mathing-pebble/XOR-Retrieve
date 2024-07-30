@@ -99,4 +99,66 @@ def main():
 
     encode_loader = DataLoader(
         encode_dataset,
-        batch_s
+        batch_size=training_args.per_device_eval_batch_size * len(jax.devices()),
+        collate_fn=EncodeCollator(
+            tokenizer,
+            max_length=text_max_length,
+            padding='max_length',
+            pad_to_multiple_of=16,
+            return_tensors=TensorType.NUMPY,
+        ),
+        shuffle=False,
+        drop_last=False,
+        num_workers=training_args.dataloader_num_workers,
+    )
+
+    adamw = optax.adamw(0.0001)
+    state = TrainState.create(apply_fn=model.__call__, params=model.params, tx=adamw)
+
+    def encode_step(batch, state):
+        embedding = state.apply_fn(**batch, params=state.params, train=False)[0]
+        return embedding[:, 0]
+
+    p_encode_step = pmap(encode_step, axis_name='batch')
+    state = jax_utils.replicate(state)
+
+    encoded = []
+    lookup_indices = []
+    chunk_size = 10000  # Adjust the chunk size as needed
+    chunk_counter = 0
+
+    for batch in tqdm(encode_loader):
+        batch_ids = batch[0]  # List of text_ids
+        batch_data = batch[1]  # Actual data dictionary
+
+        batch_data = {k: np.array(v) for k, v in batch_data.items()}
+        batch_embeddings = p_encode_step(shard(batch_data), state)
+        lookup_indices.extend(batch_ids)
+        encoded.extend(np.concatenate(batch_embeddings, axis=0))
+
+        # Save intermediate results and clear memory
+        if len(encoded) >= chunk_size:
+            output_data = {
+                "encoded_queries": [encoded_item.tolist() for encoded_item in encoded],
+                "lookup_indices": lookup_indices
+            }
+            with open(f'{data_args.encoded_save_path}_chunk_{chunk_counter}.pkl', 'wb') as f:
+                pickle.dump(output_data, f)
+            encoded = []
+            lookup_indices = []
+            chunk_counter += 1
+            clear_memory()
+
+    # Save any remaining data
+    if encoded:
+        output_data = {
+            "encoded_queries": [encoded_item.tolist() for encoded_item in encoded],
+            "lookup_indices": lookup_indices
+        }
+        with open(f'{data_args.encoded_save_path}_chunk_{chunk_counter}.pkl', 'wb') as f:
+            pickle.dump(output_data, f)
+
+    clear_memory()
+
+if __name__ == "__main__":
+    main()
