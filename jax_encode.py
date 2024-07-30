@@ -43,25 +43,23 @@ def main():
         level=logging.INFO if training_args.local_rank in [-1, 0] else logging.WARN,
     )
 
-    model_path = (
-        model_args.model_name_or_path
-        if not model_args.untie_encoder
-        else os.path.join(model_args.model_name_or_path, "query_encoder" if data_args.encode_is_qry else "passage_encoder")
-    )
+    model_path = os.path.join(model_args.model_name_or_path, "passage_encoder")
 
     num_labels = 1
     config = AutoConfig.from_pretrained(
         model_path,
         num_labels=num_labels,
         cache_dir=model_args.cache_dir,
+        use_auth_token=True  # Add this line
     )
     tokenizer = AutoTokenizer.from_pretrained(
         model_path,
         cache_dir=model_args.cache_dir,
         use_fast=False,
+        use_auth_token=True  # Add this line
     )
 
-    model = FlaxAutoModel.from_pretrained(model_path, config=config, from_pt=False)
+    model = FlaxAutoModel.from_pretrained(model_path, config=config, from_pt=False, use_auth_token=True)  # Add this line
 
     text_max_length = data_args.q_max_len if data_args.encode_is_qry else data_args.p_max_len
     dataset_class = HFQueryDataset if data_args.encode_is_qry else HFCorpusDataset
