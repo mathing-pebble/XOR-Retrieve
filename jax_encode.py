@@ -2,6 +2,8 @@ import logging
 import os
 import json
 import sys
+import pickle
+import gc
 
 import datasets
 import jax
@@ -23,6 +25,10 @@ from transformers import (AutoConfig, AutoTokenizer, FlaxAutoModel,
 
 logger = logging.getLogger(__name__)
 
+def clear_memory():
+    gc.collect()
+    jax.clear_backends()
+
 def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
@@ -40,7 +46,7 @@ def main():
     model_path = (
         model_args.model_name_or_path
         if not model_args.untie_encoder
-        else f'{model_args.model_name_or_path}/{"query_encoder" if data_args.encode_is_qry else "passage_encoder"}'
+        else os.path.join(model_args.model_name_or_path, "query_encoder" if data_args.encode_is_qry else "passage_encoder")
     )
 
     num_labels = 1
@@ -93,49 +99,4 @@ def main():
 
     encode_loader = DataLoader(
         encode_dataset,
-        batch_size=training_args.per_device_eval_batch_size * len(jax.devices()),
-        collate_fn=EncodeCollator(
-            tokenizer,
-            max_length=text_max_length,
-            padding='max_length',
-            pad_to_multiple_of=16,
-            return_tensors=TensorType.NUMPY,
-        ),
-        shuffle=False,
-        drop_last=False,
-        num_workers=training_args.dataloader_num_workers,
-    )
-
-    adamw = optax.adamw(0.0001)
-    state = TrainState.create(apply_fn=model.__call__, params=model.params, tx=adamw)
-
-    def encode_step(batch, state):
-        embedding = state.apply_fn(**batch, params=state.params, train=False)[0]
-        return embedding[:, 0]
-
-    p_encode_step = pmap(encode_step, axis_name='batch')
-    state = jax_utils.replicate(state)
-
-    encoded = []
-    lookup_indices = []
-
-    for batch in tqdm(encode_loader):
-        batch_ids = batch[0]  # List of text_ids
-        batch_data = batch[1]  # Actual data dictionary
-        
-        batch_data = {k: np.array(v) for k, v in batch_data.items()}
-        batch_embeddings = p_encode_step(shard(batch_data), state)
-        lookup_indices.extend(batch_ids)
-        encoded.extend(np.concatenate(batch_embeddings, axis=0))
-
-    output_data = {
-        "encoded_queries": [encoded_item.tolist() for encoded_item in encoded[:dataset_size]],
-        "lookup_indices": lookup_indices[:dataset_size]
-    }
-
-    with open(data_args.encoded_save_path, 'w') as f:
-        json.dump(output_data, f)
-
-
-if __name__ == "__main__":
-    main()
+        batch_s
