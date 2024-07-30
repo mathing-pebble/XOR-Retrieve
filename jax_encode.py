@@ -140,25 +140,4 @@ def main():
         if len(encoded) >= chunk_size:
             output_data = {
                 "encoded_queries": [encoded_item.tolist() for encoded_item in encoded],
-                "lookup_indices": lookup_indices
-            }
-            with open(f'{data_args.encoded_save_path}_chunk_{chunk_counter}.pkl', 'wb') as f:
-                pickle.dump(output_data, f)
-            encoded = []
-            lookup_indices = []
-            chunk_counter += 1
-            clear_memory()
-
-    # Save any remaining data
-    if encoded:
-        output_data = {
-            "encoded_queries": [encoded_item.tolist() for encoded_item in encoded],
-            "lookup_indices": lookup_indices
-        }
-        with open(f'{data_args.encoded_save_path}_chunk_{chunk_counter}.pkl', 'wb') as f:
-            pickle.dump(output_data, f)
-
-    clear_memory()
-
-if __name__ == "__main__":
-    main()
+             
