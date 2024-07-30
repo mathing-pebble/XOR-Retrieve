@@ -149,6 +149,7 @@ def main():
             chunk_counter += 1
             clear_memory()
 
+  
     # Save any remaining data
     if encoded:
         output_data = {
