@@ -119,7 +119,7 @@ def main():
 
     encoded = []
     lookup_indices = []
-    chunk_size = 500000  
+    chunk_size = 5000000  
     chunk_counter = 0
 
     for batch in tqdm(encode_loader):
