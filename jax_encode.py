@@ -47,16 +47,16 @@ def main():
 
     num_labels = 1
     config = AutoConfig.from_pretrained(
-    model_path,
-    num_labels=num_labels,
-    cache_dir=model_args.cache_dir,
-)
-tokenizer = AutoTokenizer.from_pretrained(
-    model_path,
-    cache_dir=model_args.cache_dir,
-    use_fast=False,
-)
-model = FlaxAutoModel.from_pretrained(model_path, config=config, from_pt=False)
+        model_path,
+        num_labels=num_labels,
+        cache_dir=model_args.cache_dir,
+    )
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_path,
+        cache_dir=model_args.cache_dir,
+        use_fast=False,
+    )
+    model = FlaxAutoModel.from_pretrained(model_path, config=config, from_pt=False)
 
     text_max_length = data_args.q_max_len if data_args.encode_is_qry else data_args.p_max_len
     dataset_class = HFQueryDataset if data_args.encode_is_qry else HFCorpusDataset
