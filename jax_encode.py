@@ -68,6 +68,8 @@ def main():
     else:
         dataset_cache_dir = os.path.join(dataset_cache_dir, data_args.dataset_name.replace("/", "_"))
 
+    print(f"Using dataset cache directory: {dataset_cache_dir}")
+
     # Check if dataset is already cached
     if not os.path.exists(dataset_cache_dir):
         os.makedirs(dataset_cache_dir)
@@ -137,7 +139,9 @@ def main():
                 "encoded_queries": [encoded_item.tolist() for encoded_item in encoded],
                 "lookup_indices": lookup_indices
             }
-            with open(f'{data_args.encoded_save_path}_chunk_{chunk_counter}.pkl', 'wb') as f:
+            save_path = f'{data_args.encoded_save_path}_chunk_{chunk_counter}.pkl'
+            print(f"Saving chunk to {save_path}")
+            with open(save_path, 'wb') as f:
                 pickle.dump(output_data, f)
             encoded = []
             lookup_indices = []
@@ -150,7 +154,9 @@ def main():
             "encoded_queries": [encoded_item.tolist() for encoded_item in encoded],
             "lookup_indices": lookup_indices
         }
-        with open(f'{data_args.encoded_save_path}_chunk_{chunk_counter}.pkl', 'wb') as f:
+        save_path = f'{data_args.encoded_save_path}_chunk_{chunk_counter}.pkl'
+        print(f"Saving final chunk to {save_path}")
+        with open(save_path, 'wb') as f:
             pickle.dump(output_data, f)
 
     clear_memory()
