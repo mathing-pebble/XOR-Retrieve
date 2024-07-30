@@ -119,12 +119,12 @@ def main():
 
     encoded = []
     lookup_indices = []
-    chunk_size = 10000  # Adjust the chunk size as needed
+    chunk_size = 500000  
     chunk_counter = 0
 
     for batch in tqdm(encode_loader):
-        batch_ids = batch[0]  # List of text_ids
-        batch_data = batch[1]  # Actual data dictionary
+        batch_ids = batch[0]  
+        batch_data = batch[1]  
         
         batch_data = {k: np.array(v) for k, v in batch_data.items()}
         batch_embeddings = p_encode_step(shard(batch_data), state)
