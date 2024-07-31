@@ -38,7 +38,7 @@ def main():
 
     # Setup logging
     logging.basicConfig(
-        format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
+        format="%(asctime - levelname - name -   message)s",
         datefmt="%m/%d/%Y %H:%M:%S",
         level=logging.INFO if training_args.local_rank in [-1, 0] else logging.WARN,
     )
@@ -67,8 +67,6 @@ def main():
         dataset_cache_dir = os.path.join("/tmp/dataset_cache", data_args.dataset_name.replace("/", "_"))
     else:
         dataset_cache_dir = os.path.join(dataset_cache_dir, data_args.dataset_name.replace("/", "_"))
-
-    print(f"Using dataset cache directory: {dataset_cache_dir}")
 
     # Check if dataset is already cached
     if not os.path.exists(dataset_cache_dir):
@@ -121,12 +119,12 @@ def main():
 
     encoded = []
     lookup_indices = []
-    chunk_size = 5000000  
+    chunk_size = 10000  # Adjust the chunk size as needed
     chunk_counter = 0
 
     for batch in tqdm(encode_loader):
-        batch_ids = batch[0]  
-        batch_data = batch[1]  
+        batch_ids = batch[0]  # List of text_ids
+        batch_data = batch[1]  # Actual data dictionary
         
         batch_data = {k: np.array(v) for k, v in batch_data.items()}
         batch_embeddings = p_encode_step(shard(batch_data), state)
@@ -139,9 +137,7 @@ def main():
                 "encoded_queries": [encoded_item.tolist() for encoded_item in encoded],
                 "lookup_indices": lookup_indices
             }
-            save_path = f'{data_args.encoded_save_path}_chunk_{chunk_counter}.pkl'
-            print(f"Saving chunk to {save_path}")
-            with open(save_path, 'wb') as f:
+            with open(f'{data_args.encoded_save_path}_chunk_{chunk_counter}.pkl', 'wb') as f:
                 pickle.dump(output_data, f)
             encoded = []
             lookup_indices = []
@@ -154,9 +150,7 @@ def main():
             "encoded_queries": [encoded_item.tolist() for encoded_item in encoded],
             "lookup_indices": lookup_indices
         }
-        save_path = f'{data_args.encoded_save_path}_chunk_{chunk_counter}.pkl'
-        print(f"Saving final chunk to {save_path}")
-        with open(save_path, 'wb') as f:
+        with open(f'{data_args.encoded_save_path}_chunk_{chunk_counter}.pkl', 'wb') as f:
             pickle.dump(output_data, f)
 
     clear_memory()
