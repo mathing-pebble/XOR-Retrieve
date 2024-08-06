@@ -2,9 +2,6 @@ import logging
 import os
 import json
 import sys
-import pickle
-import gc
-
 import datasets
 import jax
 import numpy as np
@@ -22,12 +19,18 @@ from flax import jax_utils
 import optax
 from transformers import (AutoConfig, AutoTokenizer, FlaxAutoModel,
                           HfArgumentParser, TensorType)
+from google.cloud import storage
 
 logger = logging.getLogger(__name__)
 
-def clear_memory():
-    gc.collect()
-    jax.clear_backends()
+def upload_to_gcs(bucket_name, source_file_name, destination_blob_name):
+    """Uploads a file to the bucket."""
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+    blob.upload_from_filename(source_file_name)
+
+    print(f"File {source_file_name} uploaded to {destination_blob_name}.")
 
 def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
@@ -38,24 +41,29 @@ def main():
 
     # Setup logging
     logging.basicConfig(
-        format="%(asctime - levelname - name -   message)s",
+        format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
         datefmt="%m/%d/%Y %H:%M:%S",
         level=logging.INFO if training_args.local_rank in [-1, 0] else logging.WARN,
     )
 
-    model_path = model_args.model_name_or_path
+    model_path = (
+        model_args.model_name_or_path
+        if not model_args.untie_encoder
+        else f'{model_args.model_name_or_path}/{"query_encoder" if data_args.encode_is_qry else "passage_encoder"}'
+    )
 
     num_labels = 1
     config = AutoConfig.from_pretrained(
-        model_path,
+        model_args.config_name if model_args.config_name else model_path,
         num_labels=num_labels,
         cache_dir=model_args.cache_dir,
     )
     tokenizer = AutoTokenizer.from_pretrained(
-        model_path,
+        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
         cache_dir=model_args.cache_dir,
         use_fast=False,
     )
+
     model = FlaxAutoModel.from_pretrained(model_path, config=config, from_pt=False)
 
     text_max_length = data_args.q_max_len if data_args.encode_is_qry else data_args.p_max_len
@@ -68,7 +76,6 @@ def main():
     else:
         dataset_cache_dir = os.path.join(dataset_cache_dir, data_args.dataset_name.replace("/", "_"))
 
-    # Check if dataset is already cached
     if not os.path.exists(dataset_cache_dir):
         os.makedirs(dataset_cache_dir)
         encode_dataset = dataset_class(tokenizer=tokenizer, data_args=data_args, cache_dir=dataset_cache_dir)
@@ -80,7 +87,6 @@ def main():
         encode_dataset = EncodeDataset(encode_dataset.process(data_args.encode_num_shard, data_args.encode_shard_index),
                                        tokenizer, max_len=text_max_length)
 
-    # prepare padding batch (for last nonfull batch)
     dataset_size = len(encode_dataset)
     padding_prefix = "padding_"
     total_batch_size = len(jax.devices()) * training_args.per_device_eval_batch_size
@@ -119,8 +125,6 @@ def main():
 
     encoded = []
     lookup_indices = []
-    chunk_size = 10000  # Adjust the chunk size as needed
-    chunk_counter = 0
 
     for batch in tqdm(encode_loader):
         batch_ids = batch[0]  # List of text_ids
@@ -131,29 +135,17 @@ def main():
         lookup_indices.extend(batch_ids)
         encoded.extend(np.concatenate(batch_embeddings, axis=0))
 
-        # Save intermediate results and clear memory
-        if len(encoded) >= chunk_size:
-            output_data = {
-                "encoded_queries": [encoded_item.tolist() for encoded_item in encoded],
-                "lookup_indices": lookup_indices
-            }
-            with open(f'{data_args.encoded_save_path}_chunk_{chunk_counter}.pkl', 'wb') as f:
-                pickle.dump(output_data, f)
-            encoded = []
-            lookup_indices = []
-            chunk_counter += 1
-            clear_memory()
+    output_data = {
+        "encoded_queries": [encoded_item.tolist() for encoded_item in encoded[:dataset_size]],
+        "lookup_indices": lookup_indices[:dataset_size]
+    }
 
-    # Save any remaining data
-    if encoded:
-        output_data = {
-            "encoded_queries": [encoded_item.tolist() for encoded_item in encoded],
-            "lookup_indices": lookup_indices
-        }
-        with open(f'{data_args.encoded_save_path}_chunk_{chunk_counter}.pkl', 'wb') as f:
-            pickle.dump(output_data, f)
-
-    clear_memory()
+    with open(data_args.encoded_save_path, 'w') as f:
+        json.dump(output_data, f)
+    
+    # GCS 버킷에 업로드
+    gcs_bucket_name = "YOUR_GCS_BUCKET_NAME"
+    upload_to_gcs(gcs_bucket_name, data_args.encoded_save_path, data_args.encoded_save_path)
 
 if __name__ == "__main__":
     main()
