@@ -52,6 +52,11 @@ def main():
         else f'{model_args.model_name_or_path}/{"query_encoder" if data_args.encode_is_qry else "passage_encoder"}'
     )
 
+    if data_args.encode_is_qry:
+        model_path = f'{model_args.model_name_or_path}/query_encoder'
+    else:
+        model_path = f'{model_args.model_name_or_path}/passage_encoder'
+
     num_labels = 1
     config = AutoConfig.from_pretrained(
         model_args.config_name if model_args.config_name else model_path,
@@ -154,4 +159,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
