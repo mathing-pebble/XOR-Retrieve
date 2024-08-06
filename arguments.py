@@ -1,3 +1,45 @@
+from dataclasses import dataclass, field
+from typing import Optional, List
+from transformers import TrainingArguments
+
+
+@dataclass
+class ModelArguments:
+    model_name_or_path: str = field(
+        metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
+    )
+    config_name: Optional[str] = field(
+        default=None, metadata={"help": "Pretrained config name or path if not the same as model_name"}
+    )
+    tokenizer_name: Optional[str] = field(
+        default=None, metadata={"help": "Pretrained tokenizer name or path if not the same as model_name"}
+    )
+    cache_dir: Optional[str] = field(
+        default=None, metadata={"help": "Where do you want to store the pretrained models downloaded from s3"}
+    )
+
+    # modeling
+    untie_encoder: bool = field(
+        default=True,
+        metadata={"help": "no weight sharing between qry passage encoders"}
+    )
+
+    # out projection
+    add_pooler: bool = field(default=False)
+    projection_in_dim: int = field(default=768)
+    projection_out_dim: int = field(default=768)
+    normalize: bool = field(default=False)
+
+    # for Jax training
+    dtype: Optional[str] = field(
+        default="float32",
+        metadata={
+            "help": "Floating-point format in which the model weights should be initialized and trained. Choose one "
+                    "of `[float32, float16, bfloat16]`. "
+        },
+    )
+
+
 @dataclass
 class DataArguments:
     dataset_name: str = field(metadata={"help": "The name of the dataset to use."})
@@ -87,3 +129,15 @@ class DataArguments:
                 self.train_path = [self.train_dir]
         else:
             self.train_path = None
+
+@dataclass
+class TevatronTrainingArguments(TrainingArguments):
+    warmup_ratio: float = field(default=0.1)
+    negatives_x_device: bool = field(default=False, metadata={"help": "share negatives across devices"})
+    do_encode: bool = field(default=False, metadata={"help": "run the encoding loop"})
+
+    grad_cache: bool = field(default=False, metadata={"help": "Use gradient cache update"})
+    gc_q_chunk_size: int = field(default=4)
+    gc_p_chunk_size: int = field(default=32)
+    
+    contrastive: bool = field(default=False, metadata={"help": "ContrastiveMix"})
