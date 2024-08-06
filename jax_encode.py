@@ -144,7 +144,7 @@ def main():
         json.dump(output_data, f)
     
     # GCS 버킷에 업로드
-    gcs_bucket_name = "YOUR_GCS_BUCKET_NAME"
+    gcs_bucket_name = "xor-retrieve-bucket1"
     upload_to_gcs(gcs_bucket_name, data_args.encoded_save_path, data_args.encoded_save_path)
 
 if __name__ == "__main__":
