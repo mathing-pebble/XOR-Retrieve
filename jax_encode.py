@@ -29,7 +29,6 @@ def upload_to_gcs(bucket_name, source_file_name, destination_blob_name):
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(destination_blob_name)
     blob.upload_from_filename(source_file_name)
-
     print(f"File {source_file_name} uploaded to {destination_blob_name}.")
 
 def main():
@@ -144,8 +143,11 @@ def main():
         json.dump(output_data, f)
     
     # GCS 버킷에 업로드
-    gcs_bucket_name = "xor-retrieve-bucket1"
-    upload_to_gcs(gcs_bucket_name, data_args.encoded_save_path, data_args.encoded_save_path)
+    try:
+        gcs_bucket_name = "xor-retrieve-bucket1"
+        upload_to_gcs(gcs_bucket_name, data_args.encoded_save_path, data_args.encoded_save_path)
+    except Exception as e:
+        logger.error(f"Failed to upload to GCS: {e}")
 
 if __name__ == "__main__":
     main()
