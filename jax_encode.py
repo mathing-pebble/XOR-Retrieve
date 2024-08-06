@@ -2,6 +2,7 @@ import logging
 import os
 import json
 import sys
+
 import datasets
 import jax
 import numpy as np
@@ -19,17 +20,17 @@ from flax import jax_utils
 import optax
 from transformers import (AutoConfig, AutoTokenizer, FlaxAutoModel,
                           HfArgumentParser, TensorType)
+
 from google.cloud import storage
 
 logger = logging.getLogger(__name__)
 
 def upload_to_gcs(bucket_name, source_file_name, destination_blob_name):
-    """Uploads a file to the bucket."""
+    """Uploads a file to the GCS bucket."""
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(destination_blob_name)
     blob.upload_from_filename(source_file_name)
-    print(f"File {source_file_name} uploaded to {destination_blob_name}.")
 
 def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
@@ -139,15 +140,17 @@ def main():
         "lookup_indices": lookup_indices[:dataset_size]
     }
 
-    with open(data_args.encoded_save_path, 'w') as f:
+    local_file_path = data_args.encoded_save_path
+    with open(local_file_path, 'w') as f:
         json.dump(output_data, f)
-    
-    # GCS 버킷에 업로드
+
+    # Upload to GCS
     try:
-        gcs_bucket_name = "xor-retrieve-bucket1"
-        upload_to_gcs(gcs_bucket_name, data_args.encoded_save_path, data_args.encoded_save_path)
+        upload_to_gcs(data_args.gcs_bucket, local_file_path, os.path.basename(local_file_path))
+        logger.info(f"Successfully uploaded {local_file_path} to gs://{data_args.gcs_bucket}/{os.path.basename(local_file_path)}")
     except Exception as e:
         logger.error(f"Failed to upload to GCS: {e}")
+
 
 if __name__ == "__main__":
     main()
