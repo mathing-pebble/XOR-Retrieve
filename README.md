@@ -26,7 +26,7 @@ python jax_train.py \
 
 ### NaiveMix
 ```
-lang_abbr=ar  # one of {'ar', 'bn', 'fi', 'id', 'ja', 'ko', 'ru', 'th'}
+lang_abbr=ar  # one of {'ar', 'bn', 'fi', 'ja', 'ko', 'ru', 'te'}
 output_dir=/path/to/output/dir
 
 python jax_train.py \
