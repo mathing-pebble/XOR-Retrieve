@@ -18,7 +18,7 @@ output_dir=/path/to/output/dir
 python jax_train.py \
   --do_train --output_dir ${output_dir} \
   --dataset_name Tevatron/xor-tydi \
-  --dataset_language full \
+  --dataset_language eng_span \
   --model_name_or_path bert-base-multilingual-cased \
   --per_device_train_batch_size 16 \
   --learning_rate 1e-5 --num_train_epochs 40
@@ -61,7 +61,7 @@ python jax_train.py \
 MODEL_DIR= /path/model/encoders/dir
 OUTPUT_DIR= /path/to/output/dir
 CORPUS_DATASET="Tevatron/xor-tydi-corpus"
-QUERY_DATASET="Tevatron/xor-tydi:full:dev" # you may choose xor-tydi:{full, eng-span}:{dev, test}
+QUERY_DATASET="Tevatron/xor-tydi:eng_span:dev"
 
 # Create output directory if it does not exist
 mkdir -p ${OUTPUT_DIR}
